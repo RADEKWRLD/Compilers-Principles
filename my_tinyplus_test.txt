@@ -1,0 +1,14 @@
+{A sample TINY+ program by myself}
+int a,b,c;
+double d;
+bool e,f;
+string g;
+float h,i;
+a:=10;
+d:=0.0;
+h:=1.25;
+g:='testing';
+do
+  d:=d*h/i;
+  c:=c-1
+while a>=0

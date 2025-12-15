@@ -20,6 +20,10 @@ static TreeNode * repeat_stmt(void);
 static TreeNode * assign_stmt(void);
 static TreeNode * read_stmt(void);
 static TreeNode * write_stmt(void);
+static TreeNode * while_stmt(void);
+static TreeNode * declarations(void);
+static TreeNode * decl(void);
+static TreeNode * varlist(void);
 static TreeNode * exp(void);
 static TreeNode * simple_exp(void);
 static TreeNode * term(void);
@@ -44,7 +48,7 @@ TreeNode * stmt_sequence(void)
 { TreeNode * t = statement();
   TreeNode * p = t;
   while ((token!=ENDFILE) && (token!=END) &&
-         (token!=ELSE) && (token!=UNTIL))
+         (token!=ELSE) && (token!=UNTIL) && (token!=WHILE))
   { TreeNode * q;
     match(SEMI);
     q = statement();
@@ -67,6 +71,7 @@ TreeNode * statement(void)
     case ID : t = assign_stmt(); break;
     case READ : t = read_stmt(); break;
     case WRITE : t = write_stmt(); break;
+    case DO : t = while_stmt(); break;
     default : syntaxError("unexpected token -> ");
               printToken(token,tokenString);
               token = getToken();
@@ -98,6 +103,61 @@ TreeNode * repeat_stmt(void)
   return t;
 }
 
+TreeNode * while_stmt(void)
+{ TreeNode * t = newStmtNode(WhileK);
+  match(DO);
+  if (t!=NULL) t->child[0] = stmt_sequence();
+  match(WHILE);
+  if (t!=NULL) t->child[1] = exp();
+  return t;
+}
+
+TreeNode * declarations(void)
+{ TreeNode * t = decl();
+  TreeNode * p = t;
+  while (token == INT || token == BOOL || token == STRING ||
+         token == FLOAT || token == DOUBLE) {
+    TreeNode * q = decl();
+    if (q != NULL) {
+      if (t == NULL) t = p = q;
+      else {
+        p->sibling = q;
+        p = q;
+      }
+    }
+  }
+  return t;
+}
+
+TreeNode * decl(void)
+{ TreeNode * t = newStmtNode(DeclK);
+  if (t != NULL) {
+    t->attr.name = copyString(tokenString);
+  }
+  /* match type specifier: int/bool/string/float/double */
+  match(token);
+  if (t != NULL) {
+    t->child[0] = varlist();
+  }
+  match(SEMI);
+  return t;
+}
+
+TreeNode * varlist(void)
+{ TreeNode * t = newExpNode(IdK);
+  if (t != NULL && token == ID) {
+    t->attr.name = copyString(tokenString);
+  }
+  match(ID);
+  if (token == COMMA) {
+    match(COMMA);
+    if (t != NULL) {
+      t->sibling = varlist();
+    }
+  }
+  return t;
+}
+
 TreeNode * assign_stmt(void)
 { TreeNode * t = newStmtNode(AssignK);
   if ((t!=NULL) && (token==ID))
@@ -126,7 +186,7 @@ TreeNode * write_stmt(void)
 
 TreeNode * exp(void)
 { TreeNode * t = simple_exp();
-  if ((token==LT)||(token==EQ)) {
+  if ((token==LT)||(token==EQ)||(token==GT)||(token==GTE)||(token==LTE)) {
     TreeNode * p = newExpNode(OpK);
     if (p!=NULL) {
       p->child[0] = t;
@@ -175,9 +235,36 @@ TreeNode * factor(void)
   switch (token) {
     case NUM :
       t = newExpNode(ConstK);
-      if ((t!=NULL) && (token==NUM))
+      if ((t!=NULL) && (token==NUM)) {
         t->attr.val = atoi(tokenString);
+        t->type = Integer;
+      }
       match(NUM);
+      break;
+    case DNUM :
+      t = newExpNode(ConstK);
+      if ((t!=NULL) && (token==DNUM)) {
+        t->attr.name = copyString(tokenString);
+        t->type = Double;
+      }
+      match(DNUM);
+      break;
+    case STR :
+      t = newExpNode(ConstK);
+      if ((t!=NULL) && (token==STR)) {
+        t->attr.name = copyString(tokenString);
+        t->type = String;
+      }
+      match(STR);
+      break;
+    case T_TRUE :
+    case T_FALSE :
+      t = newExpNode(ConstK);
+      if (t!=NULL) {
+        t->attr.name = copyString(tokenString);
+        t->type = Boolean;
+      }
+      match(token);
       break;
     case ID :
       t = newExpNode(IdK);
@@ -202,13 +289,25 @@ TreeNode * factor(void)
 /****************************************/
 /* the primary function of the parser   */
 /****************************************/
-/* Function parse returns the newly 
+/* Function parse returns the newly
  * constructed syntax tree
  */
 TreeNode * parse(void)
 { TreeNode * t;
   token = getToken();
-  t = stmt_sequence();
+
+  /* Create program root node (StartK) */
+  t = newStmtNode(StartK);
+
+  /* Check if there are declarations */
+  if (token == INT || token == BOOL || token == STRING ||
+      token == FLOAT || token == DOUBLE) {
+    if (t != NULL) t->child[0] = declarations();
+  }
+
+  /* Parse statement sequence */
+  if (t != NULL) t->child[1] = stmt_sequence();
+
   if (token!=ENDFILE)
     syntaxError("Code ends before file\n");
   return t;

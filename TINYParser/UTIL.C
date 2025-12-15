@@ -33,7 +33,9 @@ void printToken( TokenType token, const char* tokenString )
 	case BOOL:
 	case STRING:
 	case DO:
-	case WHILE: 
+	case WHILE:
+	case FLOAT:
+	case DOUBLE:
        fprintf(listing,
          "reserved word: %s\n",tokenString);
 		 break;
@@ -58,6 +60,10 @@ void printToken( TokenType token, const char* tokenString )
     case NUM:
       fprintf(listing,
           "NUM, val= %s\n",tokenString);
+      break;
+    case DNUM:
+      fprintf(listing,
+          "DNUM, val= %s\n",tokenString);
       break;
     case ID:
       fprintf(listing,
@@ -174,8 +180,17 @@ void printTree( TreeNode * tree )
         case WriteK:
           fprintf(listing,"Write\n");
           break;
+        case WhileK:
+          fprintf(listing,"While\n");
+          break;
+        case DeclK:
+          fprintf(listing,"Decl: %s\n",tree->attr.name);
+          break;
+        case StartK:
+          fprintf(listing,"Program\n");
+          break;
         default:
-          fprintf(listing,"Unknown ExpNode kind\n");
+          fprintf(listing,"Unknown StmtNode kind\n");
           break;
       }
     }
@@ -186,7 +201,16 @@ void printTree( TreeNode * tree )
           printToken(tree->attr.op,"\0");
           break;
         case ConstK:
-          fprintf(listing,"Const: %d\n",tree->attr.val);
+          if (tree->type == Integer)
+            fprintf(listing,"Const: (int) %d\n",tree->attr.val);
+          else if (tree->type == String)
+            fprintf(listing,"Const: (str) %s\n",tree->attr.name);
+          else if (tree->type == Double)
+            fprintf(listing,"Const: (double) %s\n",tree->attr.name);
+          else if (tree->type == Boolean)
+            fprintf(listing,"Const: (bool) %s\n",tree->attr.name);
+          else
+            fprintf(listing,"Const: %d\n",tree->attr.val);
           break;
         case IdK:
           fprintf(listing,"Id: %s\n",tree->attr.name);

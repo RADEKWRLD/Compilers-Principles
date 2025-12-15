@@ -11,7 +11,7 @@
 
 /* states in scanner DFA */
 typedef enum
-   { START,INASSIGN,INCOMMENT,INNUM,INID,INGREAT,INLESS,INSTR,DONE }
+   { START,INASSIGN,INCOMMENT,INNUM,INID,INGREAT,INLESS,INSTR,INDNUM,DONE }
    StateType;
 
 /* lexeme of identifier or reserved word */
@@ -68,7 +68,9 @@ static struct
 	{"string",STRING},
 	{"bool",BOOL},
 	{"do",DO},
-	{"while",WHILE}
+	{"while",WHILE},
+	{"float",FLOAT},
+	{"double",DOUBLE}
 	};
 
 /* lookup an identifier to see if it is a reserved word */
@@ -223,12 +225,25 @@ TokenType getToken(void)
          }
          break;
        case INNUM:
-         if (!isdigit(c))
+         if (c == '.')
+         { /* found decimal point, switch to INDNUM state */
+           state = INDNUM;
+         }
+         else if (!isdigit(c))
          { /* backup in the input */
            ungetNextChar();
            save = FALSE;
            state = DONE;
            currentToken = NUM;
+         }
+         break;
+       case INDNUM:
+         if (!isdigit(c))
+         { /* backup in the input */
+           ungetNextChar();
+           save = FALSE;
+           state = DONE;
+           currentToken = DNUM;
          }
          break;
        case INID:

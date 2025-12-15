@@ -1,0 +1,11 @@
+{A sample TINY program - Testing all TINY features}
+read z;
+if z<100 then
+  hello:=2
+else
+  repeat
+    bye:=hello-1;
+    bye:=hello/bye
+  until z=60;
+  write over
+end
